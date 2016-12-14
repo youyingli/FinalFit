@@ -24,7 +24,6 @@ using namespace std;
 
 typedef map<string,int> multiPDF_t;
 
-
 double getNormNll(RooRealVar*mass, multiPDF_t multipdf, RooDataSet* data, double norm, double masslow, double masshigh){
 
     double bestFitNll=1.e9;
@@ -94,18 +93,19 @@ double bandvalue(RooRealVar* mass, multiPDF_t multipdf, RooDataSet* data, double
 
 
 
-void envelope(RooRealVar* mass, multiPDF_t multipdf, RooDataSet* data, string best_PDF, int best_order, map<string,RooExtendPdf*> sigPDF, bool isblind = true, bool addsignal = false){
-
-
+void envelope(RooRealVar* mass, multiPDF_t multipdf, RooDataSet* data, string best_PDF, int best_order, map<string,RooExtendPdf*> sigPDF, bool isblind = false, bool addsignal = true, bool combine =true){
+     
+     
      RooAbsPdf* bestPDF = BkgPdfbuild(mass,best_PDF,best_order,true,data);
      RooPlot* plot = mass->frame();
      plot-> GetXaxis()->SetLabelSize(0.);
-     data->plotOn(plot,Binning(80),Invisible(),MarkerSize(0.9));
-     RooHist*plotdata = (RooHist*)plot->getObject(plot->numItems()-1);
+     data->plotOn(plot,Binning(80),Invisible());
+     RooHist* plotdata = (RooHist*)plot->getObject(plot->numItems()-1);
      TObject* dataleg = (TObject*)plot->getObject(plot->numItems()-1);
-     bestPDF->plotOn(plot,LineColor(kRed),LineWidth(3));
+     if(combine) bestPDF->plotOn(plot,LineColor(kRed),LineWidth(3),LineStyle(7));
+     else bestPDF->plotOn(plot,LineColor(kRed),LineWidth(3));     
      RooCurve* bestBkgCurve = (RooCurve*)plot->getObject(plot->numItems()-1);
-     
+
      TLegend leg(0.6,0.6,0.89,0.89);
      leg.AddEntry(dataleg,"data","LEP");
      leg.AddEntry(bestBkgCurve,"Bkg fit","L");
@@ -162,14 +162,6 @@ void envelope(RooRealVar* mass, multiPDF_t multipdf, RooDataSet* data, string be
      pad1.SetBottomMargin(0.019);
      pad1.Draw();
      pad1.cd();
-
-     if(isblind){
-        mass->setRange("unblind_low",100.,115.);
-        mass->setRange("unblind_high",135.,180.);
-        data->plotOn(plot,Binning(80),CutRange("unblind_low,unblind_high"),MarkerSize(0.9));
-     }else{
-        data->plotOn(plot,Binning(80),MarkerSize(0.9));
-     }
      plot->Draw();
 
      twoSigmaband->SetLineColor(kYellow);
@@ -190,6 +182,8 @@ void envelope(RooRealVar* mass, multiPDF_t multipdf, RooDataSet* data, string be
      oneSigmaband_r->SetFillColor(kGreen);
      oneSigmaband_r->SetMarkerColor(kGreen);
 
+     RooPlot*splot = mass-> frame();
+
      if(addsignal){
         sigPDF["ggf"]->plotOn(plot,Normalization(1.0,RooAbsReal::RelativeExpected),LineColor(kBlue),LineWidth(1));
         RooCurve* ggfCurve = (RooCurve*)plot->getObject(plot->numItems()-1);
@@ -201,13 +195,29 @@ void envelope(RooRealVar* mass, multiPDF_t multipdf, RooDataSet* data, string be
         TObject* vbfleg = (TObject*)plot->getObject(plot->numItems()-1);
 	leg.AddEntry(vbfleg,"vbf(M_{H} = 126GeV)","F");
 	leg.AddEntry(ggfleg,"ggf(M_{H} = 126GeV)","F");
-	RooRealVar fvbf("fvbf","",vbfCurve->average(100.,180.)*80.,0.,1.); fvbf.setConstant(true);
-	RooRealVar fggf("fggf","",ggfCurve->average(100.,180.)*80.,0.,1.); fggf.setConstant(true);
+	RooRealVar fvbf("fvbf","",vbfCurve->average(100.,180.)*80.,0.,1000.); fvbf.setConstant(true);
+	RooRealVar fggf("fggf","",ggfCurve->average(100.,180.)*80.,0.,1000.); fggf.setConstant(true);
         RooAddPdf sigTotalPdf("total","",RooArgList(*sigPDF["ggf"],*sigPDF["vbf"]),RooArgList(fggf,fvbf));
-        sigTotalPdf.plotOn(plot,Normalization(1.0,RooAbsReal::RelativeExpected),LineColor(kBlue),LineWidth(3),LineStyle(7));
+        sigTotalPdf.plotOn(plot,Normalization(1.0,RooAbsReal::RelativeExpected),LineColor(kViolet+2),LineWidth(4),LineStyle(2));
         TObject* totalleg = (TObject*)plot->getObject(plot->numItems()-1);
 	leg.AddEntry(totalleg,"vbf+ggf(M_{H} = 126GeV}","L");
+        if(combine){
+           sigTotalPdf.plotOn(splot,Normalization(1.0,RooAbsReal::RelativeExpected),LineColor(kRed),LineWidth(3),LineStyle(1));
+	   RooRealVar fsig("fsig","",fvbf.getValV()+fggf.getValV(),0.,100000.); fsig.setConstant(true);
+	   RooRealVar fbkg("fbkg","",bestBkgCurve->average(100.,180.)*80.,0.,100000.); fbkg.setConstant(true);
+	   RooAddPdf TotalPDF("TotalPDF","",RooArgList(*bestPDF,sigTotalPdf),RooArgList(fbkg,fsig));
+           TotalPDF.plotOn(plot,Normalization(1.0,RooAbsReal::RelativeExpected),LineColor(kRed),LineWidth(3),LineStyle(1));
+	}
      }
+
+     if(isblind){
+        mass->setRange("unblind_low",100.,115.);
+        mass->setRange("unblind_high",135.,180.);
+        data->plotOn(plot,Binning(80),CutRange("unblind_low,unblind_high"),MarkerSize(0.9),XErrorSize(0));
+     }else{
+        data->plotOn(plot,Binning(80),MarkerSize(0.9));
+     }
+
      plot->Draw("same");
      leg.Draw("same");
      canv.Update();
@@ -271,15 +281,18 @@ void envelope(RooRealVar* mass, multiPDF_t multipdf, RooDataSet* data, string be
      latex2 -> SetTextFont(42);
      latex2 -> SetTextSize(0.13);
      latex2 -> DrawText(0.7,0.86,"Bkg subtracted");
-
-
-				  
+		  
      TLine *line3 = new TLine(100,0.,180,0.);
      line3->SetLineColor(kRed);
-     line3->SetLineWidth(4.0);
+     line3->SetLineWidth(3);
      line3->Draw();
+     if(combine){
+	line3->SetLineStyle(7);
+	splot->Draw("SAME");
+     }
      hdatasub->Draw("PESAME");
      hdatasub->SetMarkerSize(0.9);
+
 
      canv.Update();
 

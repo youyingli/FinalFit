@@ -32,7 +32,7 @@
 #include "TLegend.h"
 #include "TMath.h"
 
-#include "../../macro/rootlogon.C"
+#include "../macro/rootlogon.C"
 #include "PDFLIB.h"
 #include "envelope.h"
 
@@ -172,7 +172,7 @@ int main(){
     RooMsgService::instance().setSilentMode(true);
 //Input Information  
 //-------------------------------------------------------------------------------------
-    TString inpath = "/wk_cms/youying/Analysis3/fitter/tmp/";
+    TString inpath = "/wk_cms/youying/Analysis3/fitter/";
     TString infile = "DataSet.root";
     system("mkdir -p fitresult");
     TFile*myfile = TFile::Open( inpath + infile );
@@ -217,7 +217,7 @@ int main(){
     
 	for(int order=1;order<7;order++){
     
-            RooAbsPdf* SigMggPdf = buildMultiGaussians(Mgg,order,MH,false/*Do not fit*/,it->first,it->second);
+            RooAbsPdf* SigMggPdf = buildMultiGaussians(Mgg,order,MH,false,it->first,it->second);
             RooFitResult* fitres = SigMggPdf->fitTo(*(it->second),Minimizer("Minuit2","minimize"),Save(true),Verbose(false),SumW2Error(true),Range(115.,135.));
     
             thisNll = fitres->minNll();
@@ -308,7 +308,7 @@ int main(){
     int best_order = 0;
     map<string,int> multipdf = plot(Mgg,candPDF,BkgDataSet,&bestPDF,&best_order);
     RooAbsPdf* MggBkgShape = BkgPdfbuild(Mgg,bestPDF,best_order,true/*Do fit*/,BkgDataSet);
-    envelope(Mgg,multipdf,BkgDataSet,bestPDF,best_order,extSignalPDF,true/*blind*/,true/*addSignal*/);
+    envelope(Mgg,multipdf,BkgDataSet,bestPDF,best_order,extSignalPDF,true/*blind*/,true/*addSignal*/,false/*combine*/);
 
 //BDT Shapes Test
 //-------------------------------------------------------------------------------------------------------------------------------------------------------
