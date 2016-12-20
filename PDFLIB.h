@@ -64,12 +64,14 @@ RooAbsPdf* BkgPdfbuild(RooRealVar* mass, string pdfType, int order, bool dofit =
 
     if(pdfType == "Bernstein"){
        RooRealVar* param[order];
-       RooFormulaVar* form[order];
+       //RooFormulaVar* form[order];
        RooArgList* coeffs = new RooArgList();
        for(int i=0;i<=order;i++){
-           param[i] = new RooRealVar(Form("param_%d",i),Form("param_%d",i),0.1*(i+1),-5.,5.);
-           form[i] = new RooFormulaVar(Form("form_%d",i),Form("form_%d",i),"@0*@0",RooArgList(*param[i]));
-	   coeffs->add(*form[i]);
+           //param[i] = new RooRealVar(Form("param_%d",i),Form("param_%d",i),0.1*(i+1),-5.,5.);
+           param[i] = new RooRealVar(Form("param_%d",i),Form("param_%d",i),0.1*(i+1),0.,25.);
+           //form[i] = new RooFormulaVar(Form("form_%d",i),Form("form_%d",i),"@0*@0",RooArgList(*param[i]));
+	   //coeffs->add(*form[i]);
+	   coeffs->add(*param[i]);
        }
        RooBernstein* BernPdf = new RooBernstein(Form("%s_%d",pdfType.c_str(),order),Form("%s_%d",pdfType.c_str(),order),*mass,*coeffs);
        if(dofit){
@@ -132,7 +134,7 @@ RooAbsPdf* BkgPdfbuild(RooRealVar* mass, string pdfType, int order, bool dofit =
 	  RooRealVar* expo[npow];
 	  RooRealVar* frac[nfrac];
 	  for(int i=1;i<=npow;i++){
-	      expo[i] = new RooRealVar(Form("expo_%d",i),Form("expo_%d",i),TMath::Max(-9.,-1.*(i+1)),-9.,1.);
+	      expo[i] = new RooRealVar(Form("expo_%d",i),Form("expo_%d",i),TMath::Max(-9.,-1.*(i+1)),-9.,10.);
 	      RooGenericPdf* PowPdf = new RooGenericPdf(Form("Pow_%d",i),Form("Pow_%d",i),"TMath::Power(@0,@1)",RooArgList(*mass,*expo[i]));
 	      PowList->add(*PowPdf);
 	  }
@@ -201,8 +203,8 @@ RooAbsPdf* BkgPdfbuild(RooRealVar* mass, string pdfType, int order, bool dofit =
           RooRealVar* coeff[nterm];
           RooRealVar* expo[nterm];
           for(int i=1;i<=nterm;i++){
-              coeff[i] = new RooRealVar(Form("coeff_%d",i),Form("coeff_%d",i),0.9-float(i-1)*1./nterm,0.,1.);
-              expo[i] = new RooRealVar(Form("expo_%d",i),Form("expo_%d",i),TMath::Max(-9.,-1.*(i+1)),-9.,1.);
+              coeff[i] = new RooRealVar(Form("coeff_%d",i),Form("coeff_%d",i),0.9-float(i-1)*1./nterm,0.,1);
+              expo[i] = new RooRealVar(Form("expo_%d",i),Form("expo_%d",i),TMath::Max(-9.,-1.*(i+1)),-9.,6.);
               if(i==1) formula += Form("@%d*pow(@0,@%d)",num,num+1);
               else formula += Form("+@%d*pow(@0,@%d)",num,num+1);
               params->add(*coeff[i]);
