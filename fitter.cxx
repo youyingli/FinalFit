@@ -1,4 +1,6 @@
+#include <stdio.h>
 #include <iostream>
+#include <iomanip>
 #include <vector>
 #include <map>
 #ifndef __CINT__
@@ -131,7 +133,7 @@ map<string,int> plot(RooRealVar* Mgg,map<string,int>candPDF, RooDataSet* BkgData
 
 	    }
 
-	    cout << it->first << " : " << order << " correction  =  " << correction <<endl;
+	    cout << setw(15) << it->first << order << " ----> 2NLL + lambda(nparams) = " << correction <<endl;
             bkgCandPDf -> plotOn(bframe,LineColor(color[j]));
 	    TObject *pdfLeg = bframe->getObject(int(bframe->numItems())-1);
             tmp.insert(make_pair(it->first,order));
@@ -143,7 +145,7 @@ map<string,int> plot(RooRealVar* Mgg,map<string,int>candPDF, RooDataSet* BkgData
 
     *bestpdf = bestfit;
     *bestorder = best_order;
-    cout << "Best fit : " << bestfit << best_order << endl;
+    cout << "----> Best fit : " << bestfit << best_order << endl;
     
     for(map<TString,TObject*>::iterator it = multipdfleg.begin();it!=multipdfleg.end();++it){
 	if(it->first == Form("%s_%d",bestfit.c_str(),best_order) ) leg.AddEntry(it->second,it->first + "(best of fit)","L");
@@ -204,6 +206,8 @@ int main(){
 
     //F-Test
     //--------------------------------------------------------------------------------------
+    cout << "[INFO]: Start to construct the signal model by using f-test" << endl;
+    cout << "-----------------------------------------------------------------------"<<endl;
     map<string, RooAbsPdf*> SignalPDF;
     for(map<string,RooDataSet*>::iterator it=sigdataset.begin();it!=sigdataset.end();++it){
 
@@ -213,8 +217,9 @@ int main(){
         double preNll = 0;
         double chi2 = 0;
         double prob = 0;
+	int status = 0;
 	vector<RooAbsPdf*> Gaussians;
-    
+        cout << "[INFO]: Start to handle " << it->first << " ....." << endl;
 	for(int order=1;order<7;order++){
     
             RooAbsPdf* SigMggPdf = buildMultiGaussians(Mgg,order,MH,false,it->first,it->second);
@@ -225,8 +230,8 @@ int main(){
             if(order > 1 && chi2 < 0 ) chi2 = 0;
             int delta_dof = (2*order+(order-1))-(2*pre_order+(pre_order-1));
             prob = TMath::Prob(chi2,delta_dof);
-            
-            cout <<"[INFO]:"<<"This order = "<< order <<","<<"Pre Order = "<<pre_order<<","<< "p value = " << prob <<endl;
+            status = fitres->status();
+            printf("............ This order = %d, Pre Order = %d ,p-value = %1.2e, status = %d \n",order,pre_order,prob,status);
 	    if(prob>0.05) break;
 	    Gaussians.push_back(SigMggPdf);
             pre_order = order;
@@ -234,11 +239,13 @@ int main(){
 	}
       
         best_order = pre_order;
+	cout << "----> Best Order is " << best_order << "(number of gaussians)." << endl;
         //best_order = 1;
 
         makeSigPlot(Mgg,Gaussians,it->first,it->second);
     
         RooAbsPdf* bestSigPDF = buildMultiGaussians(Mgg,best_order,MH,true/*Do fit*/,it->first,it->second);
+        cout << "-----------------------------------------------------------------------"<<endl;
         SignalPDF.insert(make_pair(it->first,bestSigPDF));
     }
     map<string, RooExtendPdf*> extSignalPDF;
@@ -248,6 +255,8 @@ int main(){
         RooExtendPdf* extsigpdf = new RooExtendPdf(Form("%s_Extend",(it->first).c_str()),"",*(it->second),*norm);
         extSignalPDF.insert(make_pair(it->first,extsigpdf));
     }
+    cout << "[INFO]: Signal construction has Finished." << endl;
+    cout << "*******************************************************************************************" << endl << endl;
 
 //Background Shapes Construction
 //-----------------------------------------------------------------------------------------------------------------------------------
@@ -259,25 +268,27 @@ int main(){
     PDFfamily.push_back("Exponential");
     //PDFfamily.push_back("Exponential2");
 
-    //RooDataSet* BkgDataSet = (RooDataSet*)bkg->reduce(RooArgSet(*Mgg));
-
     //Use the dataSet of real data
     RooDataSet* BkgDataSet = (RooDataSet*)data->reduce(RooArgSet(*Mgg));
 
     //F-Test
     //---------------------------------------------------------------------------------------------------------------------------
+    cout << "[INFO]: Start to construct the background shape by using f-test" << endl;
+    cout << "-----------------------------------------------------------------------"<<endl;
     map<string,int>candPDF;
     for(vector<string>::iterator it = PDFfamily.begin();it!=PDFfamily.end();++it){
 
         int order = 1;
         int pre_order = 0;
         int cache_order = 0;
-        int best_order = 0;
+        int highest_order = 0;
         double thisNll = 0.;
         double preNll = 10e8;
         double chi2 = 0.;
         double prob = 0.;
-        int sts = 0;
+        int status = 0;
+
+	cout <<"[INFO]:"<< *it << " function family... " << endl;
         while(order<7 && prob < 0.05  ){
 
               RooAbsPdf* bkgCandPDf = BkgPdfbuild(Mgg,*it,order);
@@ -291,24 +302,36 @@ int main(){
                  if(order > 1 && chi2 < 0 ) chi2 = 0;
                  int delta_dof = order - pre_order;
                  prob = TMath::Prob(chi2,delta_dof);
-	         sts = fitres ->status();
-
-                 cout <<"[INFO]:"<<"This order = "<< order <<","<<"Pre Order = "<<pre_order<<", Type = "<<*it <<",p value = " << prob <<"  state = " << sts <<endl;
+	         status = fitres ->status();
+                 
+                 printf("............ This order = %d, Pre Order = %d ,p-value = %1.2e, status = %d \n",order,pre_order,prob,status);
                  cache_order = pre_order;
                  pre_order = order;
                  preNll = thisNll;
                  order++;
 	      }
 	}
-        best_order = cache_order;
-        candPDF.insert(pair<string,int>(*it,best_order));
-
+        highest_order = cache_order;
+        candPDF.insert(pair<string,int>(*it,highest_order));
+	cout << "----> The highest order is " << highest_order << endl;
+        cout << "-----------------------------------------------------------------------" << endl;
     }
+    cout << "[INFO]: f-test has finished." << endl;
+    cout << "[INFO]: Decide which pdf is the best." << endl;
+    cout << "-----------------------------------------------------------------------" << endl;
+
     string bestPDF = "";
     int best_order = 0;
     map<string,int> multipdf = plot(Mgg,candPDF,BkgDataSet,&bestPDF,&best_order);
     RooAbsPdf* MggBkgShape = BkgPdfbuild(Mgg,bestPDF,best_order,true/*Do fit*/,BkgDataSet);
+    cout << "-----------------------------------------------------------------------" << endl;
+    cout << "[INFO]: Do envelope plot" << endl;
+    cout << "-----------------------------------------------------------------------" << endl;
     envelope(Mgg,multipdf,BkgDataSet,bestPDF,best_order,extSignalPDF,true/*blind*/,true/*addSignal*/,false/*combine*/);
+    cout << "-----------------------------------------------------------------------" << endl;
+    cout << "[INFO]: Background shape construction has finiched" << endl;
+    cout << "*******************************************************************************************" << endl << endl;
+
 
 //BDT Shapes Test
 //-------------------------------------------------------------------------------------------------------------------------------------------------------
@@ -403,7 +426,6 @@ int main(){
     RooRealVar* N_Bkg = new RooRealVar("N_gj","N_gj", SM_Bkg, 0, 20000);
     RooProdPdf* h2dBkgPDF = new RooProdPdf("h2dBkgPDF","Mgg*BDT",*MggBkgShape,*bkgBDTPDF);
 
-    cout << SM_VBF <<"  "<< SM_GGF << "  " << BkgDataSet->sumEntries() <<endl;
     //Store the shapes into the same workspace file
     RooWorkspace outws("outws");
     outws.import(*h2dVBFPDF);
@@ -499,7 +521,7 @@ int main(){
     leg2->SetFillStyle(0);
     leg2->SetBorderSize(0);
     leg2->Draw();
-    canv5.Print("fitresult/BDT.pdf");
+    canv5.Print("fitresult/MggvsBDT.pdf");
 
 
 //MC Study

@@ -121,7 +121,7 @@ RooAbsPdf* BkgPdfbuild(RooRealVar* mass, string pdfType, int order, bool dofit =
     if(pdfType == "PowerLaw"){
        if(order%2 == 0){
        //if(order%2 == 1){
-	  cout << "[INFO] : order has to be odd number" << endl;
+	  //cout << "[INFO] : order has to be odd number" << endl;
 	  //cout << "[INFO] : order has to be even number" << endl;
 	  return NULL;
        }else{
@@ -157,7 +157,7 @@ RooAbsPdf* BkgPdfbuild(RooRealVar* mass, string pdfType, int order, bool dofit =
     if(pdfType == "Exponential"){
        if(order%2 == 0){
        //if(order%2 == 1){
-	  cout << "[INFO] : order has to be odd number" << endl;
+	  //cout << "[INFO] : order has to be odd number" << endl;
 	  //cout << "[INFO] : order has to be even number" << endl;
 	  return NULL;
        }else{
@@ -203,7 +203,7 @@ RooAbsPdf* BkgPdfbuild(RooRealVar* mass, string pdfType, int order, bool dofit =
           RooRealVar* coeff[nterm];
           RooRealVar* expo[nterm];
           for(int i=1;i<=nterm;i++){
-              coeff[i] = new RooRealVar(Form("coeff_%d",i),Form("coeff_%d",i),0.9-float(i-1)*1./nterm,0.,1);
+              coeff[i] = new RooRealVar(Form("coeff_%d",i),Form("coeff_%d",i),0.9-float(i-1)*1./nterm,0.,1.);
               expo[i] = new RooRealVar(Form("expo_%d",i),Form("expo_%d",i),TMath::Max(-9.,-1.*(i+1)),-9.,6.);
               if(i==1) formula += Form("@%d*pow(@0,@%d)",num,num+1);
               else formula += Form("+@%d*pow(@0,@%d)",num,num+1);

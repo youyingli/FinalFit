@@ -119,7 +119,7 @@ void envelope(RooRealVar* mass, multiPDF_t multipdf, RooDataSet* data, string be
 
      int p=0;
      //for(double MH = 100.;MH<180.5;MH+=0.5){
-     for(double MH = 100.;MH<180.5;MH+=2.){
+     for(double MH = 100.;MH<180.5;MH+=1.){
 
          double lowedge = MH-0.5;
 	 double highedge = MH+0.5;
