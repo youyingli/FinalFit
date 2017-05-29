@@ -291,6 +291,7 @@ void envelope(RooRealVar* mass, multiPDF_t multipdf, RooDataSet* data, string be
 	splot->Draw("SAME");
      }
      hdatasub->Draw("PESAME");
+     hdatasub->SetMarkerStyle(20);
      hdatasub->SetMarkerSize(0.9);
 
 
